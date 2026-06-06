@@ -4,6 +4,7 @@ import com.pm.urlshortner.dto.AnalyticsResponse;
 import com.pm.urlshortner.dto.ShortenRequest;
 import com.pm.urlshortner.dto.ShortenResponse;
 import com.pm.urlshortner.exception.InvalidCustomCodeException;
+import com.pm.urlshortner.exception.UrlExpiredException;
 import com.pm.urlshortner.exception.UrlNotFoundException;
 import com.pm.urlshortner.model.Click;
 import com.pm.urlshortner.model.Url;
@@ -103,13 +104,13 @@ public class UrlService {
 
         // 2. Check Database
         Url url = urlRepository.findByShortCode(code)
-                .orElseThrow(UrlNotFoundException::new);
+                .orElseThrow(() -> new UrlNotFoundException(code));
 
         // 3. Check Expiry
         if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(LocalDateTime.now())) {
             urlRepository.delete(url);
             redisService.delete(code);
-            throw new UrlNotFoundException();
+            throw new UrlExpiredException(code);
         }
 
         // 4. Cache in Redis and return
@@ -144,7 +145,7 @@ public class UrlService {
 
     public AnalyticsResponse getAnalytics(String code) {
         Url url = urlRepository.findByShortCode(code)
-                .orElseThrow(UrlNotFoundException::new);
+                .orElseThrow(() -> new UrlNotFoundException(code));
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime beginningOfToday = now.toLocalDate().atStartOfDay();
@@ -163,6 +164,25 @@ public class UrlService {
                 .createdAt(url.getCreatedAt())
                 .build();
     }
+
+    @Transactional
+    public void delete(String code) {
+        Url url = urlRepository.findByShortCode(code)
+                .orElseThrow(() -> new UrlNotFoundException(code));
+        urlRepository.delete(url);
+        redisService.delete(code);
+    }
+
+    public ShortenResponse getUrlInfo(String code) {
+        Url url = urlRepository.findByShortCode(code)
+                .orElseThrow(() -> new UrlNotFoundException(code));
+
+        return ShortenResponse.builder()
+                .shortUrl(baseUrl + url.getShortCode())
+                .shortCode(url.getShortCode())
+                .originalUrl(url.getOriginalUrl())
+                .createdAt(url.getCreatedAt())
+                .expiresAt(url.getExpiresAt())
+                .build();
+    }
 }
-
-
