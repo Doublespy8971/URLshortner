@@ -51,5 +51,11 @@ class ShortCodeGeneratorTest {
         assertFalse(generator.isValidCustomCode("not_alphanumeric!")); // Special characters
         assertFalse(generator.isValidCustomCode(null));
     }
-}
 
+    @Test
+    void shouldBeDifferentOnSubsequentCalls() {
+        String code1 = generator.generate();
+        String code2 = generator.generate();
+        assertNotEquals(code1, code2);
+    }
+}
