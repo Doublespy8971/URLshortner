@@ -25,7 +25,7 @@ public class UrlController {
         return ResponseEntity.status(HttpStatus.CREATED).body(urlService.shorten(request));
     }
 
-    @GetMapping("/{code}")
+    @GetMapping("/{code:[a-zA-Z0-9]{4,20}}")
     public ResponseEntity<Void> redirect(@PathVariable String code, HttpServletRequest request) {
         String originalUrl = urlService.getOriginalUrl(code);
 
